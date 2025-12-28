@@ -1,22 +1,7 @@
 import requests
 import json
 import time
-import os
 import sys
-
-CONFIG_FILE = 'config.json'
-
-def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        print(f"Error: {CONFIG_FILE} not found.")
-        sys.exit(1)
-    
-    with open(CONFIG_FILE, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            print(f"Error: Failed to parse {CONFIG_FILE}.")
-            sys.exit(1)
 
 def send_message(token, channel_id, content):
     url = f"https://discord.com/api/v9/channels/{channel_id}/messages"
@@ -31,47 +16,77 @@ def send_message(token, channel_id, content):
     try:
         response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()
-        print(f"Success: Message sent to channel {channel_id}")
+        return {"success": True}
     except requests.exceptions.HTTPError as e:
-        print(f"Failed to send message to {channel_id}: {e}")
+        error_msg = str(e)
         if response.text:
-            print(f"Response: {response.text}")
+            try:
+                error_msg += f": {response.json().get('message', response.text)}"
+            except:
+                error_msg += f": {response.text}"
+        return {"success": False, "error": error_msg}
     except Exception as e:
-        print(f"Error: {e}")
+        return {"success": False, "error": str(e)}
+
+def log_to_ui(data):
+    """Print JSON data to stdout and flush immediately."""
+    print(json.dumps(data), flush=True)
 
 def main():
-    print("Discord Message Broadcaster")
-    print("---------------------------")
-    
-    token = input("Enter your Discord User Token: ").strip()
-    if not token:
-        print("Error: Token cannot be empty.")
+    # Read all input from stdin
+    try:
+        input_data = sys.stdin.read()
+        if not input_data:
+            log_to_ui({"type": "error", "message": "No input received"})
+            return
+            
+        request = json.loads(input_data)
+    except json.JSONDecodeError:
+        log_to_ui({"type": "error", "message": "Invalid JSON input"})
         return
-    
-    config = load_config()
-    
-    print(f"\nFound {len(config)} targets in config.")
-    
-    for entry in config:
-        channel_id = entry.get('channel_id')
-        role_id = entry.get('role_id')
-        base_text = entry.get('message_text', '')
+
+    token = request.get('token')
+    targets = request.get('targets', [])
+
+    if not token:
+        log_to_ui({"type": "error", "message": "Token is missing"})
+        return
+
+    log_to_ui({"type": "log", "message": f"Starting broadcast to {len(targets)} targets..."})
+
+    total = len(targets)
+    for index, target in enumerate(targets):
+        channel_id = target.get('channel_id')
+        role_id = target.get('role_id')
+        base_text = target.get('message', '')
         
+        # Report progress
+        log_to_ui({
+            "type": "progress",
+            "current": index + 1,
+            "total": total,
+            "channel_id": channel_id
+        })
+
         if not channel_id:
-            print("Skipping entry: Missing channel_id")
+            log_to_ui({"type": "error", "channel_id": "unknown", "message": "Missing channel_id"})
             continue
             
-        # Construct message content
-        # If role_id is present, format it as a mention
         message_content = base_text
         if role_id:
             message_content = f"<@&{role_id}> {base_text}"
             
-        print(f"Sending to channel {channel_id}...")
-        send_message(token, channel_id, message_content)
+        result = send_message(token, channel_id, message_content)
         
-        # Avoid rate limits
+        if result['success']:
+            log_to_ui({"type": "success", "channel_id": channel_id, "message": "Sent successfully"})
+        else:
+            log_to_ui({"type": "error", "channel_id": channel_id, "message": result['error']})
+        
+        # Rate limit
         time.sleep(1)
+
+    log_to_ui({"type": "done", "summary": "Broadcast complete"})
 
 if __name__ == "__main__":
     main()
