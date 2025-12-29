@@ -4,7 +4,38 @@
     "description": "Broadcast messages to multiple Discord channels",
     "main": "main.js",
     "scripts": {
-        "start": "electron ."
+        "start": "electron .",
+        "build": "electron-builder --linux"
+    },
+    "build": {
+        "appId": "com.discord.broadcaster",
+        "productName": "Discord Broadcaster",
+        "linux": {
+            "target": [
+                "AppImage",
+                "deb"
+            ],
+            "category": "Utility"
+        },
+        "files": [
+            "**/*",
+            "!node_modules/.cache/**/*",
+            "!venv/**/*"
+        ],
+        "extraResources": [
+            {
+                "from": "main.py",
+                "to": "main.py"
+            },
+            {
+                "from": "check_env.py",
+                "to": "check_env.py"
+            },
+            {
+                "from": "requirements.txt",
+                "to": "requirements.txt"
+            }
+        ]
     },
     "devDependencies": {
         "electron": "^33.2.1",

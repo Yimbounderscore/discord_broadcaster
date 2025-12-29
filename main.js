@@ -1,6 +1,34 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const fs = require('fs');
+
+// Helper to get path to Python scripts (different in dev vs packaged)
+function getResourcePath(filename) {
+    if (app.isPackaged) {
+        // In packaged app, resources are in the resources folder
+        return path.join(process.resourcesPath, filename);
+    } else {
+        // In development, resources are in the project directory
+        return path.join(__dirname, filename);
+    }
+}
+
+// Helper to get Python executable path
+function getPythonPath() {
+    if (app.isPackaged) {
+        // In packaged app, always use system python
+        // (We don't bundle python/venv to keep size down and avoid complexity)
+        return 'python3';
+    } else {
+        // In development, prefer venv if it exists
+        const venvPath = path.join(__dirname, 'venv', 'bin', 'python');
+        if (fs.existsSync(venvPath)) {
+            return venvPath;
+        }
+        return 'python3';
+    }
+}
 
 // Handler for showing prompt dialog
 ipcMain.handle('show-prompt', async (event, { title, defaultValue }) => {
@@ -25,54 +53,64 @@ ipcMain.handle('show-prompt', async (event, { title, defaultValue }) => {
 
 // Handler for checking Python environment
 ipcMain.handle('check-python-env', async () => {
-    const fs = require('fs');
-    let pythonPath = 'python3';
-    const venvPath = path.join(__dirname, 'venv', 'bin', 'python');
+    try {
+        const pythonPath = getPythonPath();
+        const checkEnvScript = getResourcePath('check_env.py');
 
-    if (fs.existsSync(venvPath)) {
-        pythonPath = venvPath;
-    }
+        // Check if script exists
+        if (!fs.existsSync(checkEnvScript)) {
+            return {
+                python_ok: false,
+                requests_ok: false,
+                errors: [`Script not found at: ${checkEnvScript}`]
+            };
+        }
 
-    return new Promise((resolve) => {
-        const checkProcess = spawn(pythonPath, ['check_env.py'], {
-            cwd: __dirname
-        });
+        return new Promise((resolve) => {
+            const checkProcess = spawn(pythonPath, [checkEnvScript]);
 
-        let output = '';
-        let errorOutput = '';
+            let output = '';
+            let errorOutput = '';
 
-        checkProcess.stdout.on('data', (data) => {
-            output += data.toString();
-        });
+            checkProcess.stdout.on('data', (data) => {
+                output += data.toString();
+            });
 
-        checkProcess.stderr.on('data', (data) => {
-            errorOutput += data.toString();
-        });
+            checkProcess.stderr.on('data', (data) => {
+                errorOutput += data.toString();
+            });
 
-        checkProcess.on('close', (code) => {
-            if (code === 0 && output) {
-                try {
-                    resolve(JSON.parse(output.trim()));
-                } catch (e) {
-                    resolve({ python_ok: false, requests_ok: false, errors: ['Failed to parse check result'] });
+            checkProcess.on('close', (code) => {
+                if (code === 0 && output) {
+                    try {
+                        resolve(JSON.parse(output.trim()));
+                    } catch (e) {
+                        resolve({ python_ok: false, requests_ok: false, errors: ['Failed to parse check result'] });
+                    }
+                } else {
+                    resolve({
+                        python_ok: false,
+                        requests_ok: false,
+                        errors: [`Python check failed (code ${code}). ${errorOutput || 'Make sure Python 3.6+ is installed.'}`]
+                    });
                 }
-            } else {
+            });
+
+            checkProcess.on('error', (err) => {
                 resolve({
                     python_ok: false,
                     requests_ok: false,
-                    errors: [`Python not found or check failed. Make sure Python 3.6+ is installed.`]
+                    errors: [`Python not found: ${err.message}. Please install Python 3.6 or higher.`]
                 });
-            }
-        });
-
-        checkProcess.on('error', () => {
-            resolve({
-                python_ok: false,
-                requests_ok: false,
-                errors: ['Python not found. Please install Python 3.6 or higher.']
             });
         });
-    });
+    } catch (err) {
+        return {
+            python_ok: false,
+            requests_ok: false,
+            errors: [`Internal Error: ${err.message}\nStack: ${err.stack}`]
+        };
+    }
 });
 
 function createWindow() {
@@ -109,15 +147,9 @@ ipcMain.handle('start-broadcast', (event, data) => {
     const win = BrowserWindow.fromWebContents(event.sender);
 
     return new Promise((resolve, reject) => {
-        const fs = require('fs');
-        let pythonPath = 'python3';
-        const venvPath = path.join(__dirname, 'venv', 'bin', 'python');
-
-        if (fs.existsSync(venvPath)) {
-            pythonPath = venvPath;
-        }
-
-        const pythonProcess = spawn(pythonPath, ['main.py']);
+        const pythonPath = getPythonPath();
+        const mainPyScript = getResourcePath('main.py');
+        const pythonProcess = spawn(pythonPath, [mainPyScript]);
 
         let errorOutput = '';
 

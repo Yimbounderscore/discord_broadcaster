@@ -41,7 +41,8 @@ async function checkPythonEnvironment() {
             }
         }
     } catch (err) {
-        envWarningText.textContent = 'Could not check Python environment. Make sure Python 3.6+ is installed.';
+        envWarningText.textContent = `Could not check Python environment. Error: ${err.message}`;
+        console.error(err);
         envWarning.classList.remove('hidden');
         envWarningInstall.classList.remove('hidden');
     }
