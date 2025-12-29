@@ -1,29 +1,44 @@
 const targetsList = document.getElementById('targets-list');
 const addTargetBtn = document.getElementById('add-target-btn');
 const broadcastBtn = document.getElementById('broadcast-btn');
+const previewBtn = document.getElementById('preview-btn');
 const statusDisplay = document.getElementById('status-display');
 const template = document.getElementById('target-template');
 const saveTokenCheck = document.getElementById('save-token-check');
 const deleteTokenBtn = document.getElementById('delete-token-btn');
 const tokenInput = document.getElementById('token-input');
 const toggleTokenBtn = document.getElementById('toggle-token-btn');
+const profileSelect = document.getElementById('profile-select');
+const saveProfileBtn = document.getElementById('save-profile-btn');
+const deleteProfileBtn = document.getElementById('delete-profile-btn');
+const profileModal = document.getElementById('profile-modal');
+const profileNameInput = document.getElementById('profile-name-input');
+const modalCancelBtn = document.getElementById('modal-cancel-btn');
+const modalSaveBtn = document.getElementById('modal-save-btn');
 
 // Load saved settings on startup
 loadSettings();
+loadProfiles();
 
 // Event Listeners
 addTargetBtn.addEventListener('click', () => addTarget());
-broadcastBtn.addEventListener('click', startBroadcast);
+broadcastBtn.addEventListener('click', () => startBroadcast(false));
+previewBtn.addEventListener('click', () => startBroadcast(true));
 deleteTokenBtn.addEventListener('click', deleteSavedToken);
 toggleTokenBtn.addEventListener('click', toggleTokenVisibility);
+profileSelect.addEventListener('change', switchProfile);
+saveProfileBtn.addEventListener('click', showProfileModal);
+deleteProfileBtn.addEventListener('click', deleteCurrentProfile);
+modalCancelBtn.addEventListener('click', hideProfileModal);
+modalSaveBtn.addEventListener('click', confirmSaveProfile);
 
 function toggleTokenVisibility() {
     if (tokenInput.type === 'password') {
         tokenInput.type = 'text';
-        toggleTokenBtn.textContent = '🙈';
+        toggleTokenBtn.textContent = 'Hide';
     } else {
         tokenInput.type = 'password';
-        toggleTokenBtn.textContent = '👁';
+        toggleTokenBtn.textContent = 'Show';
     }
 }
 
@@ -32,7 +47,8 @@ window.discordAPI.onProgress((data) => {
     if (data.type === 'log') {
         showStatus(data.message, 'info');
     } else if (data.type === 'progress') {
-        showStatus(`Sending... (${data.current}/${data.total})`, 'info');
+        const targetLabel = data.name || `Channel ${data.channel_id}`;
+        showStatus(`Sending to ${targetLabel}... (${data.current}/${data.total})`, 'info');
     } else if (data.type === 'success') {
         // Optional: verify individual success visually if needed
         console.log(`Success: ${data.channel_id}`);
@@ -57,18 +73,134 @@ function loadSettings() {
         deleteTokenBtn.classList.add('hidden');
     }
 
-    // Load Targets
+    // Load Targets from active profile (handled by loadProfiles)
+}
+
+// ========== PROFILE MANAGEMENT ==========
+
+function getProfilesData() {
     try {
-        const savedTargets = JSON.parse(localStorage.getItem('discord_broadcaster_targets'));
-        if (savedTargets && Array.isArray(savedTargets) && savedTargets.length > 0) {
-            savedTargets.forEach(t => addTarget(t));
-        } else {
-            addTarget(); // Add default empty target
+        const data = JSON.parse(localStorage.getItem('discord_broadcaster_profiles'));
+        if (data && data.profiles) {
+            return data;
         }
-    } catch (e) {
-        console.error("Failed to load targets", e);
-        addTarget(); // Add default empty target on error
+    } catch (e) { }
+    return { profiles: { 'Default': [] }, activeProfile: 'Default' };
+}
+
+function saveProfilesData(data) {
+    localStorage.setItem('discord_broadcaster_profiles', JSON.stringify(data));
+}
+
+function loadProfiles() {
+    const data = getProfilesData();
+
+    // Populate dropdown
+    profileSelect.innerHTML = '';
+    Object.keys(data.profiles).forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        profileSelect.appendChild(option);
+    });
+
+    // Set active profile
+    profileSelect.value = data.activeProfile;
+
+    // Load targets for active profile
+    loadTargetsFromProfile(data.activeProfile);
+}
+
+function loadTargetsFromProfile(profileName) {
+    const data = getProfilesData();
+    const targets = data.profiles[profileName] || [];
+
+    // Clear existing targets
+    targetsList.innerHTML = '';
+
+    if (targets.length > 0) {
+        targets.forEach(t => addTarget(t));
+    } else {
+        addTarget(); // Add default empty target
     }
+}
+
+function switchProfile() {
+    const selectedProfile = profileSelect.value;
+    const data = getProfilesData();
+    data.activeProfile = selectedProfile;
+    saveProfilesData(data);
+    loadTargetsFromProfile(selectedProfile);
+    showStatus(`Switched to profile: ${selectedProfile}`, 'info');
+}
+
+function showProfileModal() {
+    profileNameInput.value = profileSelect.value;
+    profileModal.classList.remove('hidden');
+    profileNameInput.focus();
+}
+
+function hideProfileModal() {
+    profileModal.classList.add('hidden');
+}
+
+function confirmSaveProfile() {
+    const newName = profileNameInput.value.trim();
+
+    if (!newName) {
+        return;
+    }
+
+    const data = getProfilesData();
+    const currentTargets = getCurrentTargetsData();
+
+    data.profiles[newName] = currentTargets;
+    data.activeProfile = newName;
+    saveProfilesData(data);
+
+    loadProfiles();
+    hideProfileModal();
+    showStatus(`Profile "${newName}" saved!`, 'success');
+}
+
+function deleteCurrentProfile() {
+    const currentProfile = profileSelect.value;
+
+    if (currentProfile === 'Default') {
+        showStatus('Cannot delete the Default profile.', 'error');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to delete profile "${currentProfile}"?`)) {
+        return;
+    }
+
+    const data = getProfilesData();
+    delete data.profiles[currentProfile];
+    data.activeProfile = 'Default';
+
+    // Ensure Default exists
+    if (!data.profiles['Default']) {
+        data.profiles['Default'] = [];
+    }
+
+    saveProfilesData(data);
+    loadProfiles();
+    showStatus(`Profile "${currentProfile}" deleted.`, 'info');
+}
+
+function getCurrentTargetsData() {
+    const targets = [];
+    const cards = targetsList.querySelectorAll('.target-card');
+    cards.forEach(card => {
+        targets.push({
+            channel_id: card.querySelector('.channel-id').value.trim(),
+            role_id: card.querySelector('.role-id').value.trim(),
+            message: card.querySelector('.message-text').value.trim(),
+            name: card.querySelector('.target-name').value.trim()
+        });
+    });
+    return targets;
 }
 
 function deleteSavedToken() {
@@ -89,6 +221,7 @@ function addTarget(data = null) {
         card.querySelector('.channel-id').value = data.channel_id || '';
         card.querySelector('.role-id').value = data.role_id || '';
         card.querySelector('.message-text').value = data.message || '';
+        card.querySelector('.target-name').value = data.name || '';
     }
 
     // Setup delete handler
@@ -133,7 +266,7 @@ function showStatus(message, type = 'info') {
     statusDisplay.classList.remove('hidden');
 }
 
-async function startBroadcast() {
+async function startBroadcast(isPreview = false) {
     const token = document.getElementById('token-input').value.trim();
     if (!token) {
         showStatus('Please enter your Discord User Token.', 'error');
@@ -153,6 +286,7 @@ async function startBroadcast() {
         const channelId = card.querySelector('.channel-id').value.trim();
         const roleId = card.querySelector('.role-id').value.trim();
         const message = card.querySelector('.message-text').value.trim();
+        const name = card.querySelector('.target-name').value.trim();
 
         if (!channelId) {
             showStatus(`Target #${index + 1} is missing a Channel ID.`, 'error');
@@ -165,7 +299,7 @@ async function startBroadcast() {
             return;
         }
 
-        targets.push({ channel_id: channelId, role_id: roleId, message: message });
+        targets.push({ channel_id: channelId, role_id: roleId, message: message, name: name });
     });
 
     if (validationError) return;
@@ -174,28 +308,26 @@ async function startBroadcast() {
     if (saveTokenCheck.checked) {
         localStorage.setItem('discord_broadcaster_token', token);
         deleteTokenBtn.classList.remove('hidden');
-    } else {
-        // If unchecked, ensure we don't store it (or remove it if previously stored?)
-        // The user might have just unchecked it.
-        if (localStorage.getItem('discord_broadcaster_token')) {
-            // Optional: Decide behavior. For safely, let's strictly respect the check.
-            // If unchecked but exists, do we remove it? 
-            // Requirement says "option to delete it". 
-            // Let's assume unchecked means "don't update/save", but explicit delete is via button.
-            // However, for best UX, if I uncheck "Save", I probably don't want it saved.
-        }
     }
 
-    // Persistence: Save Targets (already covered by input listeners, but force update for safety)
+    // Persistence: Save Targets
     saveTargets();
 
     broadcastBtn.disabled = true;
-    showStatus('Starting broadcast process...', 'info');
+    previewBtn.disabled = true;
+
+    if (isPreview) {
+        showStatus('Running preview (no messages will be sent)...', 'info');
+    } else {
+        showStatus('Starting broadcast process...', 'info');
+    }
 
     try {
-        await window.discordAPI.startBroadcast({ token, targets });
+        await window.discordAPI.startBroadcast({ token, targets, preview: isPreview });
     } catch (err) {
         showStatus(`Broadcast failed to start: ${err.message}`, 'error');
-        broadcastBtn.disabled = false;
     }
+
+    broadcastBtn.disabled = false;
+    previewBtn.disabled = false;
 }

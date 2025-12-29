@@ -1,1 +1,13 @@
-{"name":"discord-broadcaster","version":"1.0.0","main":"main.js","scripts":{"start":"electron ."},"devDependencies":{"electron":"^33.4.11","electron-builder":"^25.1.8"}}
+{
+    "name": "discord-broadcaster",
+    "version": "1.0.0",
+    "description": "Broadcast messages to multiple Discord channels",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron ."
+    },
+    "devDependencies": {
+        "electron": "^33.2.1",
+        "electron-builder": "^25.1.8"
+    }
+}

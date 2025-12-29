@@ -40,18 +40,32 @@
                         <input type="password" id="token-input" placeholder="Paste your token here..."
                             autocomplete="off">
                         <button type="button" id="toggle-token-btn" class="btn-toggle"
-                            title="Show/Hide Token">👁</button>
+                            title="Show/Hide Token">Show</button>
                     </div>
 
                     <div class="checkbox-group">
                         <input type="checkbox" id="save-token-check">
-                        <label for="save-token-check">Save Token securely</label>
+                        <label for="save-token-check">Save Token locally</label>
                     </div>
-                    <p class="hint">Your token is used only for this session unless you choose to save it.</p>
+                    <p class="hint">Your token is used only for this session unless you choose to save it locally. Only
+                        you will ever have access to your token.</p>
                 </div>
             </section>
 
             <section class="targets-section">
+                <div class="profile-bar">
+                    <div class="profile-selector">
+                        <label for="profile-select">Profile:</label>
+                        <select id="profile-select">
+                            <option value="default">Default</option>
+                        </select>
+                    </div>
+                    <div class="profile-actions">
+                        <button id="save-profile-btn" class="btn secondary small">Save As...</button>
+                        <button id="delete-profile-btn" class="btn secondary small danger-text">Delete</button>
+                    </div>
+                </div>
+
                 <div class="section-header">
                     <h2>Broadcast Targets</h2>
                     <button id="add-target-btn" class="btn secondary small">+ Add Target</button>
@@ -64,7 +78,13 @@
 
             <section class="action-section">
                 <div id="status-display" class="status-display hidden"></div>
-                <button id="broadcast-btn" class="btn primary large">Start Broadcast</button>
+                <div class="action-buttons">
+                    <div class="tooltip-container">
+                        <button id="preview-btn" class="btn secondary large">Preview</button>
+                        <div class="tooltip-element">Test your broadcast without sending messages</div>
+                    </div>
+                    <button id="broadcast-btn" class="btn primary large">Start Broadcast</button>
+                </div>
             </section>
         </main>
     </div>
@@ -73,6 +93,7 @@
         <div class="target-card">
             <div class="card-header">
                 <span class="target-number">#1</span>
+                <input type="text" class="target-name" placeholder="Target name (optional)">
                 <button class="btn-icon delete-btn" title="Remove Target">×</button>
             </div>
             <div class="card-body">
@@ -112,6 +133,18 @@
             </div>
         </div>
     </template>
+
+    <!-- Profile Name Modal -->
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Save Profile</h3>
+            <input type="text" id="profile-name-input" placeholder="Enter profile name...">
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="btn secondary small">Cancel</button>
+                <button id="modal-save-btn" class="btn primary small">Save</button>
+            </div>
+        </div>
+    </div>
 
     <script src="renderer.js"></script>
 </body>

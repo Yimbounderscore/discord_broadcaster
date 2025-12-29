@@ -1,6 +1,27 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+
+// Handler for showing prompt dialog
+ipcMain.handle('show-prompt', async (event, { title, defaultValue }) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showMessageBox(win, {
+        type: 'question',
+        title: 'Save Profile',
+        message: title,
+        buttons: ['Cancel', 'Save'],
+        defaultId: 1,
+        cancelId: 0
+    });
+
+    if (result.response === 1) {
+        // User clicked Save - since dialog.showMessageBox doesn't support input,
+        // we'll use a workaround: return a signal that triggers a custom modal in renderer
+        // For now, let's use the default value approach
+        return defaultValue || 'New Profile';
+    }
+    return null;
+});
 
 function createWindow() {
     const win = new BrowserWindow({

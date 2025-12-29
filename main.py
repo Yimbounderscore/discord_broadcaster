@@ -47,46 +47,63 @@ def main():
 
     token = request.get('token')
     targets = request.get('targets', [])
+    is_preview = request.get('preview', False)
 
     if not token:
         log_to_ui({"type": "error", "message": "Token is missing"})
         return
 
-    log_to_ui({"type": "log", "message": f"Starting broadcast to {len(targets)} targets..."})
+    mode_label = "PREVIEW" if is_preview else "broadcast"
+    log_to_ui({"type": "log", "message": f"Starting {mode_label} to {len(targets)} targets..."})
 
     total = len(targets)
+    success_count = 0
+    error_count = 0
+    
     for index, target in enumerate(targets):
         channel_id = target.get('channel_id')
         role_id = target.get('role_id')
         base_text = target.get('message', '')
+        target_name = target.get('name', '') or f"Target #{index + 1}"
         
         # Report progress
         log_to_ui({
             "type": "progress",
             "current": index + 1,
             "total": total,
-            "channel_id": channel_id
+            "channel_id": channel_id,
+            "name": target_name
         })
 
         if not channel_id:
-            log_to_ui({"type": "error", "channel_id": "unknown", "message": "Missing channel_id"})
+            log_to_ui({"type": "error", "channel_id": "unknown", "name": target_name, "message": "Missing channel_id"})
+            error_count += 1
             continue
             
         message_content = base_text
         if role_id:
             message_content = f"<@&{role_id}> {base_text}"
-            
-        result = send_message(token, channel_id, message_content)
         
-        if result['success']:
-            log_to_ui({"type": "success", "channel_id": channel_id, "message": "Sent successfully"})
+        if is_preview:
+            # Preview mode: just log what would happen
+            log_to_ui({"type": "success", "channel_id": channel_id, "name": target_name, "message": f"[PREVIEW] Would send: {message_content[:50]}..."})
+            success_count += 1
         else:
-            log_to_ui({"type": "error", "channel_id": channel_id, "message": result['error']})
-        
-        # Rate limit
-        time.sleep(1)
+            # Actual broadcast
+            result = send_message(token, channel_id, message_content)
+            
+            if result['success']:
+                log_to_ui({"type": "success", "channel_id": channel_id, "name": target_name, "message": "Sent successfully"})
+                success_count += 1
+            else:
+                log_to_ui({"type": "error", "channel_id": channel_id, "name": target_name, "message": result['error']})
+                error_count += 1
+            
+            # Rate limit only for actual sends
+            time.sleep(1)
 
-    log_to_ui({"type": "done", "summary": "Broadcast complete"})
+    summary = f"{mode_label.title()} complete: {success_count} successful, {error_count} failed"
+    log_to_ui({"type": "done", "summary": summary})
 
 if __name__ == "__main__":
     main()
