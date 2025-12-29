@@ -23,10 +23,62 @@ ipcMain.handle('show-prompt', async (event, { title, defaultValue }) => {
     return null;
 });
 
+// Handler for checking Python environment
+ipcMain.handle('check-python-env', async () => {
+    const fs = require('fs');
+    let pythonPath = 'python3';
+    const venvPath = path.join(__dirname, 'venv', 'bin', 'python');
+
+    if (fs.existsSync(venvPath)) {
+        pythonPath = venvPath;
+    }
+
+    return new Promise((resolve) => {
+        const checkProcess = spawn(pythonPath, ['check_env.py'], {
+            cwd: __dirname
+        });
+
+        let output = '';
+        let errorOutput = '';
+
+        checkProcess.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        checkProcess.stderr.on('data', (data) => {
+            errorOutput += data.toString();
+        });
+
+        checkProcess.on('close', (code) => {
+            if (code === 0 && output) {
+                try {
+                    resolve(JSON.parse(output.trim()));
+                } catch (e) {
+                    resolve({ python_ok: false, requests_ok: false, errors: ['Failed to parse check result'] });
+                }
+            } else {
+                resolve({
+                    python_ok: false,
+                    requests_ok: false,
+                    errors: [`Python not found or check failed. Make sure Python 3.6+ is installed.`]
+                });
+            }
+        });
+
+        checkProcess.on('error', () => {
+            resolve({
+                python_ok: false,
+                requests_ok: false,
+                errors: ['Python not found. Please install Python 3.6 or higher.']
+            });
+        });
+    });
+});
+
 function createWindow() {
     const win = new BrowserWindow({
-        width: 800,
-        height: 700,
+        width: 1280,
+        height: 720,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,

@@ -21,6 +21,21 @@
             <p class="subtitle">Broadcast messages to multiple channels easily.</p>
         </header>
 
+        <!-- Environment Warning Banner -->
+        <div id="env-warning" class="env-warning hidden">
+            <div class="env-warning-header">
+                <strong>Environment Issue:</strong>
+                <span id="env-warning-text"></span>
+            </div>
+            <div id="env-warning-install" class="env-warning-install hidden">
+                <p>After installing Python, run this command in your terminal:</p>
+                <div class="copy-command">
+                    <code id="install-command">pip install requests</code>
+                    <button id="copy-command-btn" class="btn secondary small">Copy</button>
+                </div>
+            </div>
+        </div>
+
         <main>
             <section class="config-section">
                 <div class="input-group">
@@ -115,11 +130,11 @@
                     <div class="field">
                         <div class="label-with-info">
                             <label>Role ID (Optional)</label>
-                            <div class="tooltip-container">
+                            <div class="tooltip-container tooltip-left">
                                 <i class="info-icon" tabindex="0">i</i>
                                 <div class="tooltip-element">
                                     Enable Developer Mode in Discord, right-click the role in Server Settings, and click
-                                    "Copy Role ID" This will allow you to ping a specific role.
+                                    "Copy Role ID". This will allow you to ping a specific role.
                                 </div>
                             </div>
                         </div>

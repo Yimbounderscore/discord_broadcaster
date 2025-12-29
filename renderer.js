@@ -15,10 +15,48 @@ const profileModal = document.getElementById('profile-modal');
 const profileNameInput = document.getElementById('profile-name-input');
 const modalCancelBtn = document.getElementById('modal-cancel-btn');
 const modalSaveBtn = document.getElementById('modal-save-btn');
+const envWarning = document.getElementById('env-warning');
+const envWarningText = document.getElementById('env-warning-text');
+const envWarningInstall = document.getElementById('env-warning-install');
+const copyCommandBtn = document.getElementById('copy-command-btn');
+
+// Check Python environment on startup
+checkPythonEnvironment();
 
 // Load saved settings on startup
 loadSettings();
 loadProfiles();
+
+async function checkPythonEnvironment() {
+    try {
+        const result = await window.discordAPI.checkPythonEnv();
+
+        if (!result.python_ok || !result.requests_ok) {
+            envWarningText.textContent = result.errors.join(' ');
+            envWarning.classList.remove('hidden');
+
+            // Show install instructions if requests is missing
+            if (!result.requests_ok) {
+                envWarningInstall.classList.remove('hidden');
+            }
+        }
+    } catch (err) {
+        envWarningText.textContent = 'Could not check Python environment. Make sure Python 3.6+ is installed.';
+        envWarning.classList.remove('hidden');
+        envWarningInstall.classList.remove('hidden');
+    }
+}
+
+// Copy command button handler
+copyCommandBtn.addEventListener('click', () => {
+    const command = document.getElementById('install-command').textContent;
+    navigator.clipboard.writeText(command).then(() => {
+        copyCommandBtn.textContent = 'Copied!';
+        setTimeout(() => {
+            copyCommandBtn.textContent = 'Copy';
+        }, 2000);
+    });
+});
 
 // Event Listeners
 addTargetBtn.addEventListener('click', () => addTarget());
