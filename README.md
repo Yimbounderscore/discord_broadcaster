@@ -32,19 +32,6 @@ You can save your broadcast configurations as profiles:
 - Select a profile from the dropdown to load it
 - Click "Delete" to remove the current profile
 
-## Building for Fedora
-
-The RPM package is specifically designed for Fedora and other RPM-based distributions:
-
-```bash
-npm run build
-```
-
-Install the generated RPM:
-
-```bash
-sudo dnf install ./dist/discord-broadcaster-*.rpm
-```
 
 ## License
 
