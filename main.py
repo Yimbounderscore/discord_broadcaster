@@ -1,0 +1,109 @@
+import requests
+import json
+import time
+import sys
+
+def send_message(token, channel_id, content):
+    url = f"https://discord.com/api/v9/channels/{channel_id}/messages"
+    headers = {
+        "Authorization": token,
+        "Content-Type": "application/json"
+    }
+    data = {
+        "content": content
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        return {"success": True}
+    except requests.exceptions.HTTPError as e:
+        error_msg = str(e)
+        if response.text:
+            try:
+                error_msg += f": {response.json().get('message', response.text)}"
+            except:
+                error_msg += f": {response.text}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def log_to_ui(data):
+    """Print JSON data to stdout and flush immediately."""
+    print(json.dumps(data), flush=True)
+
+def main():
+    # Read all input from stdin
+    try:
+        input_data = sys.stdin.read()
+        if not input_data:
+            log_to_ui({"type": "error", "message": "No input received"})
+            return
+            
+        request = json.loads(input_data)
+    except json.JSONDecodeError:
+        log_to_ui({"type": "error", "message": "Invalid JSON input"})
+        return
+
+    token = request.get('token')
+    targets = request.get('targets', [])
+    is_preview = request.get('preview', False)
+
+    if not token:
+        log_to_ui({"type": "error", "message": "Token is missing"})
+        return
+
+    mode_label = "PREVIEW" if is_preview else "broadcast"
+    log_to_ui({"type": "log", "message": f"Starting {mode_label} to {len(targets)} targets..."})
+
+    total = len(targets)
+    success_count = 0
+    error_count = 0
+    
+    for index, target in enumerate(targets):
+        channel_id = target.get('channel_id')
+        role_id = target.get('role_id')
+        base_text = target.get('message', '')
+        target_name = target.get('name', '') or f"Target #{index + 1}"
+        
+        # Report progress
+        log_to_ui({
+            "type": "progress",
+            "current": index + 1,
+            "total": total,
+            "channel_id": channel_id,
+            "name": target_name
+        })
+
+        if not channel_id:
+            log_to_ui({"type": "error", "channel_id": "unknown", "name": target_name, "message": "Missing channel_id"})
+            error_count += 1
+            continue
+            
+        message_content = base_text
+        if role_id:
+            message_content = f"<@&{role_id}> {base_text}"
+        
+        if is_preview:
+            # Preview mode: just log what would happen
+            log_to_ui({"type": "success", "channel_id": channel_id, "name": target_name, "message": f"[PREVIEW] Would send: {message_content[:50]}..."})
+            success_count += 1
+        else:
+            # Actual broadcast
+            result = send_message(token, channel_id, message_content)
+            
+            if result['success']:
+                log_to_ui({"type": "success", "channel_id": channel_id, "name": target_name, "message": "Sent successfully"})
+                success_count += 1
+            else:
+                log_to_ui({"type": "error", "channel_id": channel_id, "name": target_name, "message": result['error']})
+                error_count += 1
+            
+            # Rate limit only for actual sends
+            time.sleep(1)
+
+    summary = f"{mode_label.title()} complete: {success_count} successful, {error_count} failed"
+    log_to_ui({"type": "done", "summary": summary})
+
+if __name__ == "__main__":
+    main()

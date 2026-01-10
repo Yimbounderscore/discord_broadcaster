@@ -1,0 +1,8 @@
+[
+    {
+        "server_name": "name of the server",
+        "channel_id": "REPLACE_WITH_CHANNEL_ID",
+        "role_id": "REPLACE_WITH_ROLE_ID_OR_LEAVE_EMPTY",
+        "message_text": "Your message here"
+    }
+]

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Broadcaster</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Security CSP -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self';">
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Discord Broadcaster</h1>
+            <p class="subtitle">Broadcast messages to multiple channels easily.</p>
+        </header>
+
+        <!-- Environment Warning Banner -->
+        <div id="env-warning" class="env-warning hidden">
+            <div class="env-warning-header">
+                <strong>Environment Issue:</strong>
+                <span id="env-warning-text"></span>
+            </div>
+            <div id="env-warning-install" class="env-warning-install hidden">
+                <p>After installing Python, run this command in your terminal:</p>
+                <div class="copy-command">
+                    <code id="install-command">pip install requests</code>
+                    <button id="copy-command-btn" class="btn secondary small">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <main>
+            <section class="config-section">
+                <div class="input-group">
+                    <div class="saved-token-controls">
+                        <div class="label-with-info">
+                            <label for="token-input">Discord User Token</label>
+                            <div class="tooltip-container tooltip-bottom">
+                                <i class="info-icon" tabindex="0">i</i>
+                                <div class="tooltip-element">
+                                    See the GitHub page for a tutorial on how to get your Discord user token.
+                                </div>
+                            </div>
+                        </div>
+                        <button id="delete-token-btn" class="btn-link hidden">Delete Saved Token</button>
+                    </div>
+                    <div class="input-with-toggle">
+                        <input type="password" id="token-input" placeholder="Paste your token here..."
+                            autocomplete="off">
+                        <button type="button" id="toggle-token-btn" class="btn-toggle"
+                            title="Show/Hide Token">Show</button>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="save-token-check">
+                        <label for="save-token-check">Save Token locally</label>
+                    </div>
+                    <p class="hint">Your token is used only for this session unless you choose to save it locally. Only
+                        you will ever have access to your token.</p>
+                </div>
+            </section>
+
+            <section class="targets-section">
+                <div class="profile-bar">
+                    <div class="profile-selector">
+                        <label for="profile-select">Profile:</label>
+                        <select id="profile-select">
+                            <option value="default">Default</option>
+                        </select>
+                    </div>
+                    <div class="profile-actions">
+                        <button id="save-profile-btn" class="btn secondary small">Save As...</button>
+                        <button id="delete-profile-btn" class="btn secondary small danger-text">Delete</button>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <h2>Broadcast Targets</h2>
+                    <button id="add-target-btn" class="btn secondary small">+ Add Target</button>
+                </div>
+
+                <div class="targets-list" id="targets-list">
+                    <!-- Targets will be added here dynamically -->
+                </div>
+            </section>
+
+            <section class="action-section">
+                <div id="status-display" class="status-display hidden"></div>
+                <div class="action-buttons">
+                    <div class="tooltip-container">
+                        <button id="preview-btn" class="btn secondary large">Preview</button>
+                        <div class="tooltip-element">Test your broadcast without sending messages</div>
+                    </div>
+                    <button id="broadcast-btn" class="btn primary large">Start Broadcast</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <template id="target-template">
+        <div class="target-card">
+            <div class="card-header">
+                <span class="target-number">#1</span>
+                <input type="text" class="target-name" placeholder="Target name (optional)">
+                <button class="btn-icon delete-btn" title="Remove Target">×</button>
+            </div>
+            <div class="card-body">
+                <div class="input-row">
+                    <div class="field">
+                        <div class="label-with-info">
+                            <label>Channel ID</label>
+                            <div class="tooltip-container">
+                                <i class="info-icon" tabindex="0">i</i>
+                                <div class="tooltip-element">
+                                    Enable Developer Mode in Discord, right-click the channel you want, and click "Copy
+                                    channel
+                                    ID".
+                                </div>
+                            </div>
+                        </div>
+                        <input type="text" class="channel-id" placeholder="123456789...">
+                    </div>
+                    <div class="field">
+                        <div class="label-with-info">
+                            <label>Role ID (Optional)</label>
+                            <div class="tooltip-container tooltip-left">
+                                <i class="info-icon" tabindex="0">i</i>
+                                <div class="tooltip-element">
+                                    Enable Developer Mode in Discord, right-click the role in Server Settings, and click
+                                    "Copy Role ID". This will allow you to ping a specific role.
+                                </div>
+                            </div>
+                        </div>
+                        <input type="text" class="role-id" placeholder="987654321...">
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Message Content</label>
+                    <textarea class="message-text" rows="2" placeholder="Your message here..."></textarea>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Profile Name Modal -->
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Save Profile</h3>
+            <input type="text" id="profile-name-input" placeholder="Enter profile name...">
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="btn secondary small">Cancel</button>
+                <button id="modal-save-btn" class="btn primary small">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+
+</html>
