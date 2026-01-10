@@ -2,6 +2,10 @@
     "name": "discord-broadcaster",
     "version": "1.0.0",
     "description": "Broadcast messages to multiple Discord channels",
+    "author": {
+        "name": "Yimbounderscore",
+        "email": "yimbounderscore@users.noreply.github.com"
+    },
     "main": "main.js",
     "scripts": {
         "start": "electron .",
