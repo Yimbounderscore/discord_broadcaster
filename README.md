@@ -1,64 +1,4 @@
-# Discord Broadcaster
 
-Broadcast messages to multiple Discord channels easily.
-
-## Features
-
-- Send messages to multiple Discord channels at once
-- Optional role mentions in messages
-- Save and manage multiple broadcast profiles
-- Preview mode to test before sending
-- Local token storage (optional)
-
-## Requirements
-
-- **Node.js** 16+ and npm
-- **Python 3.6+** with the `requests` library
-- **Electron** (installed via npm)
-
-## Installation
-
-### 1. Clone the repository
-
-```bash
-git clone <repository-url>
-cd discord_broadcaster
-```
-
-### 2. Install Node.js dependencies
-
-```bash
-npm install
-```
-
-### 3. Install Python dependencies
-
-```bash
-pip install requests
-```
-
-## Running the App
-
-### Development mode
-
-```bash
-npm start
-```
-
-### Build for Linux
-
-```bash
-npm run build
-```
-
-This will generate:
-- **AppImage** - Universal Linux format
-- **DEB** - For Debian/Ubuntu
-- **RPM** - For Fedora/RHEL/CentOS
-
-Built packages will be in the `dist/` folder.
-
-## Usage
 
 ### Getting Your Discord User Token
 
@@ -92,19 +32,6 @@ You can save your broadcast configurations as profiles:
 - Select a profile from the dropdown to load it
 - Click "Delete" to remove the current profile
 
-## Building for Fedora
-
-The RPM package is specifically designed for Fedora and other RPM-based distributions:
-
-```bash
-npm run build
-```
-
-Install the generated RPM:
-
-```bash
-sudo dnf install ./dist/discord-broadcaster-*.rpm
-```
 
 ## License
 
