@@ -11,7 +11,9 @@
         "start": "electron .",
         "build": "electron-builder --win --linux",
         "build:win": "electron-builder --win",
-        "build:linux": "electron-builder --linux",
+        "build:linux": "electron-builder --linux --config.linux.target=dir",
+        "build:linux:all": "electron-builder --linux",
+        "build:linux:docker": "docker run --rm -t -v %CD%:/project -v discord-broadcaster-node-modules:/project/node_modules -v %USERPROFILE%/.cache/electron:/root/.cache/electron -v %USERPROFILE%/.cache/electron-builder:/root/.cache/electron-builder electronuserland/builder:20 /bin/bash -c \"cd /project && npm install && npm run build:linux:all\"",
         "test": "vitest --environment jsdom",
         "test:watch": "vitest --watch --environment jsdom"
     },
