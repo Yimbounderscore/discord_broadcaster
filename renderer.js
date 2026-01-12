@@ -19,6 +19,10 @@ const envWarning = document.getElementById('env-warning');
 const envWarningText = document.getElementById('env-warning-text');
 const envWarningInstall = document.getElementById('env-warning-install');
 const copyCommandBtn = document.getElementById('copy-command-btn');
+const globalImageRow = document.getElementById('global-image-row');
+const globalImagePathInput = document.getElementById('global-image-path');
+const globalImageFileInput = document.getElementById('global-image-file-input');
+const globalImageClearBtn = document.getElementById('global-image-clear-btn');
 
 // Check Python environment on startup
 checkPythonEnvironment();
@@ -26,6 +30,7 @@ checkPythonEnvironment();
 // Load saved settings on startup
 loadSettings();
 loadProfiles();
+setupGlobalImageHandlers();
 
 async function checkPythonEnvironment() {
     try {
@@ -71,6 +76,55 @@ deleteProfileBtn.addEventListener('click', deleteCurrentProfile);
 modalCancelBtn.addEventListener('click', hideProfileModal);
 modalSaveBtn.addEventListener('click', confirmSaveProfile);
 
+function setupGlobalImageHandlers() {
+    globalImageFileInput.addEventListener('change', () => {
+        const file = globalImageFileInput.files[0];
+        if (file) {
+            const path = window.discordAPI.getFilePath(file);
+            globalImagePathInput.value = path;
+            saveProfilesData(getProfilesData()); // Save to current profile
+        } else {
+            globalImagePathInput.value = '';
+        }
+    });
+
+    globalImageClearBtn.addEventListener('click', () => {
+        globalImageFileInput.value = '';
+        globalImagePathInput.value = '';
+        saveProfilesData(getProfilesData());
+    });
+
+    // Drag and Drop for Global Image
+    globalImageRow.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        globalImageRow.classList.add('drag-over');
+    });
+
+    globalImageRow.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        globalImageRow.classList.remove('drag-over');
+    });
+
+    globalImageRow.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        globalImageRow.classList.remove('drag-over');
+
+        if (e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+                const path = window.discordAPI.getFilePath(file);
+                globalImagePathInput.value = path;
+                saveProfilesData(getProfilesData());
+            } else {
+                showStatus('Only image files are allowed.', 'error');
+            }
+        }
+    });
+}
+
 function toggleTokenVisibility() {
     if (tokenInput.type === 'password') {
         tokenInput.type = 'text';
@@ -93,7 +147,8 @@ window.discordAPI.onProgress((data) => {
         console.log(`Success: ${data.channel_id}`);
     } else if (data.type === 'error') {
         console.error(`Error: ${data.message}`);
-        // Maybe append error to a log list
+        const targetLabel = data.name || `Channel ${data.channel_id}`;
+        showStatus(`Error for ${targetLabel}: ${data.message}`, 'error');
     } else if (data.type === 'done') {
         showStatus(data.summary, 'success');
         broadcastBtn.disabled = false;
@@ -128,6 +183,20 @@ function getProfilesData() {
 }
 
 function saveProfilesData(data) {
+    const activeProfile = data.activeProfile;
+    const globalImage = globalImagePathInput.value.trim();
+
+    // If profile data is old array format, convert to object
+    if (Array.isArray(data.profiles[activeProfile])) {
+        data.profiles[activeProfile] = {
+            targets: data.profiles[activeProfile],
+            global_image: globalImage
+        };
+    } else if (data.profiles[activeProfile]) {
+        // Update existing object
+        data.profiles[activeProfile].global_image = globalImage;
+    }
+
     localStorage.setItem('discord_broadcaster_profiles', JSON.stringify(data));
 }
 
@@ -152,7 +221,20 @@ function loadProfiles() {
 
 function loadTargetsFromProfile(profileName) {
     const data = getProfilesData();
-    const targets = data.profiles[profileName] || [];
+    let profileData = data.profiles[profileName];
+    let targets = [];
+    let globalImage = '';
+
+    // Handle backward compatibility (array vs object)
+    if (Array.isArray(profileData)) {
+        targets = profileData;
+    } else if (profileData) {
+        targets = profileData.targets || [];
+        globalImage = profileData.global_image || '';
+    }
+
+    // Set global image input
+    globalImagePathInput.value = globalImage;
 
     // Clear existing targets
     targetsList.innerHTML = '';
@@ -192,8 +274,12 @@ function confirmSaveProfile() {
 
     const data = getProfilesData();
     const currentTargets = getCurrentTargetsData();
+    const globalImage = globalImagePathInput.value.trim();
 
-    data.profiles[newName] = currentTargets;
+    data.profiles[newName] = {
+        targets: currentTargets,
+        global_image: globalImage
+    };
     data.activeProfile = newName;
     saveProfilesData(data);
 
@@ -236,7 +322,8 @@ function getCurrentTargetsData() {
             channel_id: card.querySelector('.channel-id').value.trim(),
             role_id: card.querySelector('.role-id').value.trim(),
             message: card.querySelector('.message-text').value.trim(),
-            name: card.querySelector('.target-name').value.trim()
+            name: card.querySelector('.target-name').value.trim(),
+            image_path: card.querySelector('.image-path').value.trim()
         });
     });
     return targets;
@@ -254,6 +341,9 @@ function addTarget(data = null) {
     const clone = template.content.cloneNode(true);
     const card = clone.querySelector('.target-card');
     const deleteBtn = card.querySelector('.delete-btn');
+    const imagePathInput = card.querySelector('.image-path');
+    const imageFileInput = card.querySelector('.image-file-input');
+    const imageClearBtn = card.querySelector('.image-clear-btn');
 
     // Fill data if provided
     if (data) {
@@ -261,6 +351,10 @@ function addTarget(data = null) {
         card.querySelector('.role-id').value = data.role_id || '';
         card.querySelector('.message-text').value = data.message || '';
         card.querySelector('.target-name').value = data.name || '';
+        const savedImagePath = (data.image_path || '').trim();
+        imagePathInput.value = (savedImagePath && savedImagePath !== 'undefined' && savedImagePath !== 'null')
+            ? savedImagePath
+            : '';
     }
 
     // Setup delete handler
@@ -270,9 +364,61 @@ function addTarget(data = null) {
         saveTargets(); // Auto-save on delete
     });
 
+    imageFileInput.addEventListener('change', () => {
+        const file = imageFileInput.files[0];
+        if (file) {
+            const path = window.discordAPI.getFilePath(file);
+            imagePathInput.value = path;
+        } else {
+            imagePathInput.value = '';
+        }
+        saveTargets();
+    });
+
+    imageClearBtn.addEventListener('click', () => {
+        imageFileInput.value = '';
+        imagePathInput.value = '';
+        saveTargets();
+    });
+
+    const fileInputRow = card.querySelector('.file-input-row');
+
+    // Drag and Drop Logic
+    fileInputRow.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInputRow.classList.add('drag-over');
+    });
+
+    fileInputRow.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInputRow.classList.remove('drag-over');
+    });
+
+    fileInputRow.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInputRow.classList.remove('drag-over');
+
+        if (e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            // Validate it's an image
+            if (file.type.startsWith('image/')) {
+                const path = window.discordAPI.getFilePath(file);
+                imagePathInput.value = path;
+                saveTargets();
+            } else {
+                showStatus('Only image files are allowed.', 'error');
+            }
+        }
+    });
+
     // Auto-save on input change
     card.querySelectorAll('input, textarea').forEach(input => {
-        input.addEventListener('input', saveTargets);
+        if (!input.classList.contains('image-file-input')) {
+            input.addEventListener('input', saveTargets);
+        }
     });
 
     targetsList.appendChild(card);
@@ -286,7 +432,8 @@ function saveTargets() {
         currentTargets.push({
             channel_id: card.querySelector('.channel-id').value.trim(),
             role_id: card.querySelector('.role-id').value.trim(),
-            message: card.querySelector('.message-text').value.trim()
+            message: card.querySelector('.message-text').value.trim(),
+            image_path: card.querySelector('.image-path').value.trim()
         });
     });
     localStorage.setItem('discord_broadcaster_targets', JSON.stringify(currentTargets));
@@ -320,12 +467,19 @@ async function startBroadcast(isPreview = false) {
 
     const targets = [];
     let validationError = false;
+    const globalImage = globalImagePathInput.value.trim();
 
     cards.forEach((card, index) => {
         const channelId = card.querySelector('.channel-id').value.trim();
         const roleId = card.querySelector('.role-id').value.trim();
         const message = card.querySelector('.message-text').value.trim();
         const name = card.querySelector('.target-name').value.trim();
+        let imagePath = card.querySelector('.image-path').value.trim();
+
+        // Apply global image if target image is empty
+        if (!imagePath && globalImage) {
+            imagePath = globalImage;
+        }
 
         if (!channelId) {
             showStatus(`Target #${index + 1} is missing a Channel ID.`, 'error');
@@ -338,7 +492,13 @@ async function startBroadcast(isPreview = false) {
             return;
         }
 
-        targets.push({ channel_id: channelId, role_id: roleId, message: message, name: name });
+        targets.push({
+            channel_id: channelId,
+            role_id: roleId,
+            message: message,
+            name: name,
+            image_path: imagePath
+        });
     });
 
     if (validationError) return;
@@ -351,6 +511,7 @@ async function startBroadcast(isPreview = false) {
 
     // Persistence: Save Targets
     saveTargets();
+    saveProfilesData(getProfilesData()); // Save global image setting too
 
     broadcastBtn.disabled = true;
     previewBtn.disabled = true;

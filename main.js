@@ -16,18 +16,60 @@ function getResourcePath(filename) {
 
 // Helper to get Python executable path
 function getPythonPath() {
+    const isWindows = process.platform === 'win32';
+    const defaultPython = isWindows ? 'python' : 'python3';
+
     if (app.isPackaged) {
         // In packaged app, always use system python
         // (We don't bundle python/venv to keep size down and avoid complexity)
-        return 'python3';
+        return defaultPython;
     } else {
         // In development, prefer venv if it exists
-        const venvPath = path.join(__dirname, 'venv', 'bin', 'python');
+        const venvPath = isWindows
+            ? path.join(__dirname, 'venv', 'Scripts', 'python.exe')
+            : path.join(__dirname, 'venv', 'bin', 'python');
         if (fs.existsSync(venvPath)) {
             return venvPath;
         }
-        return 'python3';
+        return defaultPython;
     }
+}
+
+const supportedImageExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp']);
+
+function validateBroadcastPayload(payload) {
+    if (!payload || !Array.isArray(payload.targets)) {
+        return 'Invalid broadcast payload.';
+    }
+
+    for (const target of payload.targets) {
+        if (!target || typeof target !== 'object') {
+            return 'Invalid target payload.';
+        }
+
+        if (target.image_path) {
+            const imagePath = target.image_path.trim();
+            if (!imagePath || imagePath === 'undefined' || imagePath === 'null') {
+                continue;
+            }
+
+            if (!fs.existsSync(imagePath)) {
+                return `Image file not found: ${imagePath}`;
+            }
+
+            const stats = fs.statSync(imagePath);
+            if (!stats.isFile()) {
+                return `Image path is not a file: ${imagePath}`;
+            }
+
+            const extension = path.extname(imagePath).toLowerCase();
+            if (!supportedImageExtensions.has(extension)) {
+                return `Unsupported image type: ${extension}`;
+            }
+        }
+    }
+
+    return null;
 }
 
 // Handler for showing prompt dialog
@@ -147,6 +189,22 @@ ipcMain.handle('start-broadcast', (event, data) => {
     const win = BrowserWindow.fromWebContents(event.sender);
 
     return new Promise((resolve, reject) => {
+        const validationError = validateBroadcastPayload(data);
+        if (validationError) {
+            reject(new Error(validationError));
+            return;
+        }
+
+        // Sanitize payload: ensure image_path is null/empty if it's "undefined" string
+        if (data.targets && Array.isArray(data.targets)) {
+            data.targets = data.targets.map(t => {
+                if (t.image_path && (t.image_path === 'undefined' || t.image_path === 'null')) {
+                    t.image_path = '';
+                }
+                return t;
+            });
+        }
+
         const pythonPath = getPythonPath();
         const mainPyScript = getResourcePath('main.py');
         const pythonProcess = spawn(pythonPath, [mainPyScript]);

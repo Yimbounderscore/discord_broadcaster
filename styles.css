@@ -148,6 +148,29 @@ textarea {
     transition: border-color 0.2s;
 }
 
+.file-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border: 2px dashed transparent;
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.file-input-row.drag-over {
+    border-color: var(--accent);
+    background-color: rgba(88, 101, 242, 0.1);
+}
+
+.file-input-row .image-path {
+    flex: 1;
+}
+
+.file-label input {
+    display: none;
+}
+
 input:focus,
 textarea:focus {
     outline: none;
@@ -264,6 +287,14 @@ textarea:focus {
 /* Sections */
 section {
     margin-bottom: 2rem;
+}
+
+.global-image-section {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
 }
 
 .section-header {

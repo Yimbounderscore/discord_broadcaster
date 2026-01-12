@@ -81,6 +81,21 @@
                     </div>
                 </div>
 
+                <div class="global-image-section">
+                    <div class="field">
+                        <label>Global Image (Optional)</label>
+                        <div class="file-input-row" id="global-image-row">
+                            <input type="text" id="global-image-path" placeholder="No global image selected" readonly>
+                            <label class="btn secondary small file-label">
+                                <input type="file" id="global-image-file-input" accept="image/*">
+                                Browse
+                            </label>
+                            <button type="button" class="btn secondary small" id="global-image-clear-btn">Clear</button>
+                        </div>
+                        <p class="hint">This image will be sent to targets that do not have a specific image set.</p>
+                    </div>
+                </div>
+
                 <div class="section-header">
                     <h2>Broadcast Targets</h2>
                     <button id="add-target-btn" class="btn secondary small">+ Add Target</button>
@@ -144,6 +159,18 @@
                 <div class="field">
                     <label>Message Content</label>
                     <textarea class="message-text" rows="2" placeholder="Your message here..."></textarea>
+                </div>
+                <div class="field">
+                    <label>Image (Optional)</label>
+                    <div class="file-input-row">
+                        <input type="text" class="image-path" placeholder="No image selected" readonly>
+                        <label class="btn secondary small file-label">
+                            <input type="file" class="image-file-input" accept="image/*">
+                            Browse
+                        </label>
+                        <button type="button" class="btn secondary small image-clear-btn">Clear</button>
+                    </div>
+                    <p class="hint">Supported formats: PNG, JPG, GIF, WEBP, BMP.</p>
                 </div>
             </div>
         </div>

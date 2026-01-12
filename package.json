@@ -9,11 +9,18 @@
     "main": "main.js",
     "scripts": {
         "start": "electron .",
-        "build": "electron-builder --linux"
+        "build": "electron-builder --win --linux",
+        "build:win": "electron-builder --win",
+        "build:linux": "electron-builder --linux",
+        "test": "vitest --environment jsdom",
+        "test:watch": "vitest --watch --environment jsdom"
     },
     "build": {
         "appId": "com.discord.broadcaster",
         "productName": "Discord Broadcaster",
+        "win": {
+            "target": "nsis"
+        },
         "linux": {
             "target": [
                 "AppImage",
@@ -44,6 +51,8 @@
     },
     "devDependencies": {
         "electron": "^33.2.1",
-        "electron-builder": "^25.1.8"
+        "electron-builder": "^25.1.8",
+        "jsdom": "^24.1.1",
+        "vitest": "^2.1.9"
     }
 }

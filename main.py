@@ -2,31 +2,43 @@ import requests
 import json
 import time
 import sys
+import os
 
-def send_message(token, channel_id, content):
+
+def send_message(token, channel_id, content, image_path=None):
     url = f"https://discord.com/api/v9/channels/{channel_id}/messages"
     headers = {
-        "Authorization": token,
-        "Content-Type": "application/json"
+        "Authorization": token
     }
     data = {
         "content": content
     }
-    
+
+    response = None
     try:
-        response = requests.post(url, headers=headers, json=data)
+        if image_path:
+            filename = os.path.basename(image_path)
+            payload = {"payload_json": json.dumps(data)}
+            with open(image_path, "rb") as image_file:
+                files = {"files[0]": (filename, image_file)}
+                response = requests.post(url, headers=headers, data=payload, files=files)
+        else:
+            headers["Content-Type"] = "application/json"
+            response = requests.post(url, headers=headers, json=data)
+
         response.raise_for_status()
         return {"success": True}
     except requests.exceptions.HTTPError as e:
         error_msg = str(e)
-        if response.text:
+        if response is not None and response.text:
             try:
                 error_msg += f": {response.json().get('message', response.text)}"
-            except:
+            except Exception:
                 error_msg += f": {response.text}"
         return {"success": False, "error": error_msg}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
 
 def log_to_ui(data):
     """Print JSON data to stdout and flush immediately."""
@@ -64,6 +76,7 @@ def main():
         channel_id = target.get('channel_id')
         role_id = target.get('role_id')
         base_text = target.get('message', '')
+        image_path = target.get('image_path', '').strip()
         target_name = target.get('name', '') or f"Target #{index + 1}"
         
         # Report progress
@@ -86,11 +99,14 @@ def main():
         
         if is_preview:
             # Preview mode: just log what would happen
-            log_to_ui({"type": "success", "channel_id": channel_id, "name": target_name, "message": f"[PREVIEW] Would send: {message_content[:50]}..."})
+            preview_note = f"[PREVIEW] Would send: {message_content[:50]}..."
+            if image_path:
+                preview_note += " with image"
+            log_to_ui({"type": "success", "channel_id": channel_id, "name": target_name, "message": preview_note})
             success_count += 1
         else:
             # Actual broadcast
-            result = send_message(token, channel_id, message_content)
+            result = send_message(token, channel_id, message_content, image_path=image_path)
             
             if result['success']:
                 log_to_ui({"type": "success", "channel_id": channel_id, "name": target_name, "message": "Sent successfully"})
