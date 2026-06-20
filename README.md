@@ -1,3 +1,4 @@
+<img width="1440" height="1317" alt="image" src="https://github.com/user-attachments/assets/9bd659bb-c2d7-4462-aead-1edac2154d23" />
 
 
 ### Getting Your Discord User Token
@@ -34,6 +35,7 @@ You can save your broadcast configurations as profiles:
 - Select a profile from the dropdown to load it
 - Click "Delete" to remove the current profile
 
+![Uploading image.png…]()
 
 ## License
 
