@@ -42,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Windows-Installer
-          path: dist/*.exe
+          path: dist/win/*.exe
 
   build-linux:
     runs-on: ubuntu-latest
@@ -72,19 +72,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AppImage
-          path: dist/*.AppImage
+          path: dist/linux/*.AppImage
 
       - name: Upload DEB
         uses: actions/upload-artifact@v4
         with:
           name: DEB
-          path: dist/*.deb
+          path: dist/linux/*.deb
 
       - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
           name: RPM
-          path: dist/*.rpm
+          path: dist/linux/*.rpm
 
   release:
     needs: [build-windows, build-linux]
