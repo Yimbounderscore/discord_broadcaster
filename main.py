@@ -10,9 +10,9 @@ def send_message(token, channel_id, content, image_path=None):
     headers = {
         "Authorization": token
     }
-    data = {
-        "content": content
-    }
+    data = {}
+    if content:
+        data["content"] = content
 
     response = None
     try:
@@ -93,13 +93,19 @@ def main():
             error_count += 1
             continue
             
-        message_content = base_text
+        message_parts = []
         if role_id:
-            message_content = f"<@&{role_id}> {base_text}"
+            message_parts.append(f"<@&{role_id}>")
+        if base_text:
+            message_parts.append(base_text)
+        message_content = " ".join(message_parts)
         
         if is_preview:
             # Preview mode: just log what would happen
-            preview_note = f"[PREVIEW] Would send: {message_content[:50]}..."
+            preview_content = message_content[:50] if message_content else "image only"
+            preview_note = f"[PREVIEW] Would send: {preview_content}"
+            if message_content and len(message_content) > 50:
+                preview_note += "..."
             if image_path:
                 preview_note += " with image"
             log_to_ui({"type": "success", "channel_id": channel_id, "name": target_name, "message": preview_note})

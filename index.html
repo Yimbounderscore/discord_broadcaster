@@ -122,7 +122,13 @@
     <template id="target-template">
         <div class="target-card">
             <div class="card-header">
-                <span class="target-number">#1</span>
+                <div class="card-header-start">
+                    <span class="target-number">#1</span>
+                    <div class="target-enabled checkbox-group">
+                        <input type="checkbox" class="target-enabled-check" checked>
+                        <label>Enabled</label>
+                    </div>
+                </div>
                 <input type="text" class="target-name" placeholder="Target name (optional)">
                 <button class="btn-icon delete-btn" title="Remove Target">×</button>
             </div>
@@ -157,8 +163,8 @@
                     </div>
                 </div>
                 <div class="field">
-                    <label>Message Content</label>
-                    <textarea class="message-text" rows="2" placeholder="Your message here..."></textarea>
+                    <label>Message Content (Optional)</label>
+                    <textarea class="message-text" rows="2" placeholder="Optional message..."></textarea>
                 </div>
                 <div class="field">
                     <label>Image (Optional)</label>

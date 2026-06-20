@@ -21,9 +21,10 @@ To use this application, you need your Discord user token. Follow this guide to 
 ### Sending Messages
 
 1. Paste your Discord token
-2. Add broadcast targets (channel ID, optional role ID, message, and optional image)
-3. Click "Preview" to test without sending
-4. Click "Start Broadcast" to send messages
+2. Add broadcast targets (channel ID, optional role ID, optional message, and optional image)
+3. Use the **Enabled** checkbox on each target to include or skip it during broadcast
+4. Click "Preview" to test without sending
+5. Click "Start Broadcast" to send messages
 
 
 ## Profiles

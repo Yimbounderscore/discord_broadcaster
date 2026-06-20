@@ -82,7 +82,7 @@ function setupGlobalImageHandlers() {
         if (file) {
             const path = window.discordAPI.getFilePath(file);
             globalImagePathInput.value = path;
-            saveProfilesData(getProfilesData()); // Save to current profile
+            persistActiveProfile();
         } else {
             globalImagePathInput.value = '';
         }
@@ -91,7 +91,7 @@ function setupGlobalImageHandlers() {
     globalImageClearBtn.addEventListener('click', () => {
         globalImageFileInput.value = '';
         globalImagePathInput.value = '';
-        saveProfilesData(getProfilesData());
+        persistActiveProfile();
     });
 
     // Drag and Drop for Global Image
@@ -117,7 +117,7 @@ function setupGlobalImageHandlers() {
             if (file.type.startsWith('image/')) {
                 const path = window.discordAPI.getFilePath(file);
                 globalImagePathInput.value = path;
-                saveProfilesData(getProfilesData());
+                persistActiveProfile();
             } else {
                 showStatus('Only image files are allowed.', 'error');
             }
@@ -185,19 +185,19 @@ function getProfilesData() {
 function saveProfilesData(data) {
     const activeProfile = data.activeProfile;
     const globalImage = globalImagePathInput.value.trim();
+    const targets = getCurrentTargetsData();
 
-    // If profile data is old array format, convert to object
-    if (Array.isArray(data.profiles[activeProfile])) {
-        data.profiles[activeProfile] = {
-            targets: data.profiles[activeProfile],
-            global_image: globalImage
-        };
-    } else if (data.profiles[activeProfile]) {
-        // Update existing object
-        data.profiles[activeProfile].global_image = globalImage;
-    }
+    data.profiles[activeProfile] = {
+        targets,
+        global_image: globalImage
+    };
 
     localStorage.setItem('discord_broadcaster_profiles', JSON.stringify(data));
+}
+
+function persistActiveProfile() {
+    const data = getProfilesData();
+    saveProfilesData(data);
 }
 
 function loadProfiles() {
@@ -247,10 +247,12 @@ function loadTargetsFromProfile(profileName) {
 }
 
 function switchProfile() {
+    persistActiveProfile();
+
     const selectedProfile = profileSelect.value;
     const data = getProfilesData();
     data.activeProfile = selectedProfile;
-    saveProfilesData(data);
+    localStorage.setItem('discord_broadcaster_profiles', JSON.stringify(data));
     loadTargetsFromProfile(selectedProfile);
     showStatus(`Switched to profile: ${selectedProfile}`, 'info');
 }
@@ -323,7 +325,8 @@ function getCurrentTargetsData() {
             role_id: card.querySelector('.role-id').value.trim(),
             message: card.querySelector('.message-text').value.trim(),
             name: card.querySelector('.target-name').value.trim(),
-            image_path: card.querySelector('.image-path').value.trim()
+            image_path: card.querySelector('.image-path').value.trim(),
+            enabled: card.querySelector('.target-enabled-check').checked
         });
     });
     return targets;
@@ -341,6 +344,7 @@ function addTarget(data = null) {
     const clone = template.content.cloneNode(true);
     const card = clone.querySelector('.target-card');
     const deleteBtn = card.querySelector('.delete-btn');
+    const enabledCheck = card.querySelector('.target-enabled-check');
     const imagePathInput = card.querySelector('.image-path');
     const imageFileInput = card.querySelector('.image-file-input');
     const imageClearBtn = card.querySelector('.image-clear-btn');
@@ -351,17 +355,25 @@ function addTarget(data = null) {
         card.querySelector('.role-id').value = data.role_id || '';
         card.querySelector('.message-text').value = data.message || '';
         card.querySelector('.target-name').value = data.name || '';
+        enabledCheck.checked = data.enabled !== false;
         const savedImagePath = (data.image_path || '').trim();
         imagePathInput.value = (savedImagePath && savedImagePath !== 'undefined' && savedImagePath !== 'null')
             ? savedImagePath
             : '';
     }
 
+    updateTargetEnabledState(card);
+
+    enabledCheck.addEventListener('change', () => {
+        updateTargetEnabledState(card);
+        persistActiveProfile();
+    });
+
     // Setup delete handler
     deleteBtn.addEventListener('click', () => {
         card.remove();
         updateTargetNumbers();
-        saveTargets(); // Auto-save on delete
+        persistActiveProfile();
     });
 
     imageFileInput.addEventListener('change', () => {
@@ -372,13 +384,13 @@ function addTarget(data = null) {
         } else {
             imagePathInput.value = '';
         }
-        saveTargets();
+        persistActiveProfile();
     });
 
     imageClearBtn.addEventListener('click', () => {
         imageFileInput.value = '';
         imagePathInput.value = '';
-        saveTargets();
+        persistActiveProfile();
     });
 
     const fileInputRow = card.querySelector('.file-input-row');
@@ -407,7 +419,7 @@ function addTarget(data = null) {
             if (file.type.startsWith('image/')) {
                 const path = window.discordAPI.getFilePath(file);
                 imagePathInput.value = path;
-                saveTargets();
+                persistActiveProfile();
             } else {
                 showStatus('Only image files are allowed.', 'error');
             }
@@ -416,8 +428,8 @@ function addTarget(data = null) {
 
     // Auto-save on input change
     card.querySelectorAll('input, textarea').forEach(input => {
-        if (!input.classList.contains('image-file-input')) {
-            input.addEventListener('input', saveTargets);
+        if (!input.classList.contains('image-file-input') && !input.classList.contains('target-enabled-check')) {
+            input.addEventListener('input', persistActiveProfile);
         }
     });
 
@@ -425,18 +437,13 @@ function addTarget(data = null) {
     updateTargetNumbers();
 }
 
-function saveTargets() {
-    const currentTargets = [];
-    const cards = targetsList.querySelectorAll('.target-card');
-    cards.forEach(card => {
-        currentTargets.push({
-            channel_id: card.querySelector('.channel-id').value.trim(),
-            role_id: card.querySelector('.role-id').value.trim(),
-            message: card.querySelector('.message-text').value.trim(),
-            image_path: card.querySelector('.image-path').value.trim()
-        });
-    });
-    localStorage.setItem('discord_broadcaster_targets', JSON.stringify(currentTargets));
+function updateTargetEnabledState(card) {
+    const enabledCheck = card.querySelector('.target-enabled-check');
+    if (enabledCheck.checked) {
+        card.classList.remove('disabled');
+    } else {
+        card.classList.add('disabled');
+    }
 }
 
 function updateTargetNumbers() {
@@ -465,16 +472,25 @@ async function startBroadcast(isPreview = false) {
         return;
     }
 
+    const enabledCards = Array.from(cards).filter(
+        card => card.querySelector('.target-enabled-check').checked
+    );
+    if (enabledCards.length === 0) {
+        showStatus('Please enable at least one target.', 'error');
+        return;
+    }
+
     const targets = [];
     let validationError = false;
     const globalImage = globalImagePathInput.value.trim();
 
-    cards.forEach((card, index) => {
+    enabledCards.forEach((card) => {
         const channelId = card.querySelector('.channel-id').value.trim();
         const roleId = card.querySelector('.role-id').value.trim();
         const message = card.querySelector('.message-text').value.trim();
         const name = card.querySelector('.target-name').value.trim();
         let imagePath = card.querySelector('.image-path').value.trim();
+        const cardIndex = Array.from(cards).indexOf(card) + 1;
 
         // Apply global image if target image is empty
         if (!imagePath && globalImage) {
@@ -482,12 +498,12 @@ async function startBroadcast(isPreview = false) {
         }
 
         if (!channelId) {
-            showStatus(`Target #${index + 1} is missing a Channel ID.`, 'error');
+            showStatus(`Target #${cardIndex} is missing a Channel ID.`, 'error');
             validationError = true;
             return;
         }
-        if (!message) {
-            showStatus(`Target #${index + 1} has empty message content.`, 'error');
+        if (!message && !roleId && !imagePath) {
+            showStatus(`Target #${cardIndex} needs a message, role mention, or image.`, 'error');
             validationError = true;
             return;
         }
@@ -509,9 +525,8 @@ async function startBroadcast(isPreview = false) {
         deleteTokenBtn.classList.remove('hidden');
     }
 
-    // Persistence: Save Targets
-    saveTargets();
-    saveProfilesData(getProfilesData()); // Save global image setting too
+    // Persistence: Save targets and profile
+    persistActiveProfile();
 
     broadcastBtn.disabled = true;
     previewBtn.disabled = true;

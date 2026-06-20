@@ -373,6 +373,46 @@ h2 {
     animation: fadeIn 0.3s ease;
 }
 
+.target-card.disabled {
+    opacity: 0.55;
+}
+
+.target-card.disabled .card-body input,
+.target-card.disabled .card-body textarea {
+    pointer-events: none;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-header-start {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.card-header .checkbox-group {
+    margin-top: 0;
+}
+
+.target-enabled {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.target-enabled label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -385,16 +425,9 @@ h2 {
     }
 }
 
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
 .target-number {
+    line-height: 1;
+    white-space: nowrap;
     font-weight: 700;
     color: var(--text-secondary);
     font-size: 0.9rem;
@@ -402,13 +435,14 @@ h2 {
 
 .target-name {
     flex: 1;
+    min-width: 0;
     padding: 4px 8px;
     font-size: 0.85rem;
     background-color: transparent;
     border: 1px solid transparent;
     border-radius: 4px;
     color: var(--text-primary);
-    margin: 0 10px;
+    margin: 0;
 }
 
 .target-name:hover {
