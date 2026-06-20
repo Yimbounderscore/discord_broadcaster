@@ -6,12 +6,18 @@ const fs = require('fs');
 // Helper to get path to Python scripts (different in dev vs packaged)
 function getResourcePath(filename) {
     if (app.isPackaged) {
-        // In packaged app, resources are in the resources folder
+        const candidates = [
+            path.join(process.resourcesPath, filename),
+            path.join(path.dirname(process.execPath), 'resources', filename),
+        ];
+        for (const candidate of candidates) {
+            if (fs.existsSync(candidate)) {
+                return candidate;
+            }
+        }
         return path.join(process.resourcesPath, filename);
-    } else {
-        // In development, resources are in the project directory
-        return path.join(__dirname, filename);
     }
+    return path.join(__dirname, filename);
 }
 
 // Helper to get Python executable path
